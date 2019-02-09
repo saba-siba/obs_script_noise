@@ -1,0 +1,62 @@
+uniform float4x4 ViewProj;
+uniform texture2d image;
+
+uniform int timer;//0~3600-1くらい
+uniform float2 pix_size;
+uniform int distance;
+uniform int distance_min;
+uniform float period;
+uniform float speed;
+
+sampler_state textureSampler {
+    Filter    = Linear;
+    AddressU  = Clamp;
+    AddressV  = Clamp;
+};
+
+struct VertDataIn {
+    float4 pos : POSITION;
+    float2 uv  : TEXCOORD0;
+};
+
+struct VertDataOut {
+    float4 pos : POSITION;
+    float2 uv  : TEXCOORD0;
+};
+
+VertDataOut VSDefault(VertDataIn v_in)
+{
+    VertDataOut vert_out;
+    vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
+    vert_out.uv  = v_in.uv;
+    return vert_out;
+}
+
+
+//参考にしたサイトあり-1.0～1.0のランダム
+float GetRandomNumber(float2 texCoord, int Seed)
+{
+	return (frac(sin(dot(texCoord.xy, float2(12.9898, 78.233)) + Seed) * 43758.5453)-0.5)*2;
+}
+
+
+
+
+float4 PassThrough(VertDataOut v_in) : TARGET
+{
+	float2 ran=v_in.uv;
+	ran.x=0;
+	v_in.uv.x+=GetRandomNumber(v_in.uv,timer)*distance_min*pix_size;
+	v_in.uv.x+=pix_size.x*distance*GetRandomNumber(ran,timer)*sin(radians(timer*speed+v_in.uv.y*360*period));
+
+    return image.Sample(textureSampler,v_in.uv);
+}
+
+technique Draw
+{
+    pass
+    {
+        vertex_shader = VSDefault(v_in);
+        pixel_shader  = PassThrough(v_in);
+    }
+}
